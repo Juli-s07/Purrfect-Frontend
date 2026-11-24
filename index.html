@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Purrfect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1 class="logo">Purrfect 🐾</h1>
+    <nav class="tabs">
+      <button class="tab active" data-view="home">Home</button>
+      <button class="tab" data-view="cats">Cats</button>
+      <button class="tab" data-view="breeders">Breeders</button>
+      <button class="tab" data-view="buyers">For buyers</button>
+      <button class="tab" data-view="sellers">For breeders</button>
+      <button class="tab" data-view="contacts">Contacts</button>
+    </nav>
+    <div class="auth-bar">
+      <button id="profile-btn" class="btn">Profile</button>
+      <span id="auth-guest">
+        <button id="open-login" class="btn">Log in</button>
+        <button id="open-register" class="btn btn-primary">Register</button>
+      </span>
+      <span id="auth-user" hidden>
+        <span id="auth-username" class="auth-name"></span>
+        <button id="logout-btn" class="btn">Log out</button>
+      </span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Home (text comes from the home endpoint) -->
+    <section id="view-home">
+      <div class="hero">
+        <h2 data-page-title>Welcome to Purrfect</h2>
+        <p data-page-intro>A friendly marketplace where responsible breeders and loving families meet.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg" data-go="cats">Search for cats</button>
+          <button id="hero-register" class="btn btn-lg">Become a breeder</button>
+        </div>
+      </div>
+      <p class="message" data-page-message></p>
+      <div class="about" data-page-sections></div>
+      <p class="tagline" data-page-tagline></p>
+    </section>
+
+    <!-- View 1: cat catalogue -->
+    <section id="view-cats" hidden>
+      <div class="filters">
+        <input id="filter-search" type="search" placeholder="Search by name">
+        <select id="filter-breed" aria-label="Breed">
+          <option value="">All breeds</option>
+        </select>
+        <select id="filter-breeder" aria-label="Breeder">
+          <option value="">All breeders</option>
+        </select>
+        <select id="filter-country" aria-label="Breeder's country">
+          <option value="">All countries</option>
+        </select>
+        <select id="filter-status" aria-label="Status">
+          <option value="">Any status</option>
+          <option value="available">Available</option>
+          <option value="reserved">Reserved</option>
+          <option value="sold">Sold</option>
+        </select>
+        <input id="filter-min-price" type="number" min="0" placeholder="Price from, UAH" aria-label="Minimum price">
+        <input id="filter-max-price" type="number" min="0" placeholder="Price to, UAH" aria-label="Maximum price">
+        <select id="filter-sort-by" aria-label="Sort by">
+          <option value="created_at">Sort: date added</option>
+          <option value="price">Sort: price</option>
+        </select>
+        <select id="filter-order" aria-label="Order">
+          <option value="desc">Descending</option>
+          <option value="asc">Ascending</option>
+        </select>
+        <select id="filter-limit" aria-label="Cats per page">
+          <option value="10">10 per page</option>
+          <option value="20">20 per page</option>
+          <option value="50">50 per page</option>
+          <option value="100">100 per page</option>
+        </select>
+        <button id="filter-apply">Apply</button>
+        <button id="filter-reset" class="btn" type="button">Reset</button>
+      </div>
+      <p id="cats-message" class="message">Loading...</p>
+      <div id="cats" class="grid"></div>
+      <nav id="pagination" class="pagination" aria-label="Pages" hidden>
+        <button id="page-prev" class="btn" type="button">← Previous</button>
+        <span id="page-info"></span>
+        <button id="page-next" class="btn" type="button">Next →</button>
+      </nav>
+    </section>
+
+    <!-- View 2: breeders -->
+    <section id="view-breeders" hidden>
+      <p id="breeders-message" class="message">Loading...</p>
+      <div id="breeders" class="grid"></div>
+    </section>
+
+    <!-- Info page: For buyers -->
+    <section id="view-buyers" hidden>
+      <div class="page-head">
+        <h2 data-page-title>For buyers</h2>
+        <p data-page-intro></p>
+      </div>
+      <p class="message" data-page-message></p>
+      <div class="about" data-page-sections></div>
+      <p class="tagline" data-page-tagline></p>
+    </section>
+
+    <!-- Info page: For breeders -->
+    <section id="view-sellers" hidden>
+      <div class="page-head">
+        <h2 data-page-title>For breeders</h2>
+        <p data-page-intro></p>
+      </div>
+      <p class="message" data-page-message></p>
+      <div class="about" data-page-sections></div>
+      <p class="tagline" data-page-tagline></p>
+    </section>
+
+    <!-- Info page: Contacts -->
+    <section id="view-contacts" hidden>
+      <div class="page-head">
+        <h2 data-page-title>Contacts</h2>
+        <p data-page-intro></p>
+      </div>
+      <p class="message" data-page-message></p>
+      <div class="about" data-page-sections></div>
+      <p class="tagline" data-page-tagline></p>
+    </section>
+  </main>
+
+  <dialog id="cat-dialog">
+    <button id="dialog-close" class="close" aria-label="Close">×</button>
+    <div id="cat-details"></div>
+  </dialog>
+
+  <dialog id="breeder-dialog" class="wide">
+    <button id="breeder-dialog-close" class="close" aria-label="Close">×</button>
+    <div id="breeder-details"></div>
+  </dialog>
+
+  <dialog id="profile-dialog">
+    <button class="close" data-close="profile-dialog" aria-label="Close">×</button>
+    <h2>My profile</h2>
+    <div id="profile-details"></div>
+  </dialog>
+
+  <dialog id="login-dialog">
+    <button class="close" data-close="login-dialog" aria-label="Close">×</button>
+    <h2>Log in</h2>
+    <form id="login-form" novalidate>
+      <p class="form-error" id="login-form-error" role="alert"></p>
+
+      <label class="field">Username
+        <input name="username" type="text" maxlength="150" autocomplete="username">
+        <small class="error" data-error-for="username"></small>
+      </label>
+
+      <label class="field">Password
+        <input name="password" type="password" maxlength="128" autocomplete="current-password">
+        <small class="error" data-error-for="password"></small>
+      </label>
+
+      <button type="submit" class="btn btn-primary btn-block">Log in</button>
+    </form>
+  </dialog>
+
+  <dialog id="register-dialog">
+    <button class="close" data-close="register-dialog" aria-label="Close">×</button>
+    <h2>Register</h2>
+    <form id="register-form" novalidate>
+      <p class="form-error" id="register-form-error" role="alert"></p>
+
+      <label class="field">Username *
+        <input name="username" type="text" maxlength="150" autocomplete="username">
+        <small class="error" data-error-for="username"></small>
+      </label>
+
+      <label class="field">First name
+        <input name="first_name" type="text" maxlength="150" autocomplete="given-name">
+        <small class="error" data-error-for="first_name"></small>
+      </label>
+
+      <label class="field">Last name
+        <input name="last_name" type="text" maxlength="150" autocomplete="family-name">
+        <small class="error" data-error-for="last_name"></small>
+      </label>
+
+      <label class="field">Email *
+        <input name="email" type="email" maxlength="254" autocomplete="email">
+        <small class="error" data-error-for="email"></small>
+      </label>
+
+      <label class="field">Password * <span class="hint">(at least 8 characters, letters and digits)</span>
+        <input name="password" type="password" maxlength="128" autocomplete="new-password">
+        <small class="error" data-error-for="password"></small>
+      </label>
+
+      <label class="field">Repeat password *
+        <input name="password_confirmation" type="password" maxlength="128" autocomplete="new-password">
+        <small class="error" data-error-for="password_confirmation"></small>
+      </label>
+
+      <button type="submit" class="btn btn-primary btn-block">Create account</button>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
