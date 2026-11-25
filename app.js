@@ -143,6 +143,46 @@ async function request(path, { method = "GET", body, auth = true, base = API_URL
 
 const api = (path) => request(path);
 
+// ---------- Користувач / права / кеш котів ----------
+let meCache = null;
+let mePromise = null;
+let allCatsCache = null;
+let currentCatId = null;
+let currentBreederId = null;
+
+async function loadMe() {
+  if (!tokens.access) { meCache = null; return null; }
+  if (meCache) return meCache;
+  if (mePromise) return mePromise;
+  mePromise = request("/users/me/", { base: AUTH_URL })
+    .then((data) => { meCache = data; return data; })
+    .catch(() => { meCache = null; return null; })
+    .finally(() => { mePromise = null; });
+  return mePromise;
+}
+
+function canEditParents(me) {
+  return Boolean(me && (me.is_staff || me.breeder_id));
+}
+
+async function loadAllCats() {
+  if (allCatsCache) return allCatsCache;
+  const limit = 100;
+  let page = 1;
+  let total = Infinity;
+  const items = [];
+  while (items.length < total && page <= 20) {
+    const data = await api(`/cats${SLASH}?page=${page}&limit=${limit}&sort_by=created_at&order=desc`);
+    const pageItems = Array.isArray(data) ? data : (data.items ?? []);
+    items.push(...pageItems);
+    total = Array.isArray(data) ? pageItems.length : (data.total ?? pageItems.length);
+    if (Array.isArray(data) || !data.items || pageItems.length < limit) break;
+    page += 1;
+  }
+  allCatsCache = items;
+  return items;
+}
+
 // ---------- Info pages (Home, For buyers, For breeders, Contacts) ----------
 
 // Paths are relative to API_URL. Change them to match your core/urls.py.
@@ -310,13 +350,18 @@ async function loadCats(page = 1) {
 }
 
 async function openCat(id) {
+  currentCatId = id;
   const details = $("cat-details");
   details.textContent = "Loading...";
   $("cat-dialog").showModal();
   try {
     const cat = await api(`/cats/${id}${SLASH}`);
+    if (currentCatId !== id) return;
     const breederCountry = countryName(cat.breeder);
     const breederPlace = [cat.breeder.city, breederCountry].filter(Boolean).map(escapeHtml).join(", ");
+    const me = await loadMe();
+    if (currentCatId !== id) return;
+    const showForm = canEditParents(me);
     details.innerHTML = `
       <img src="${escapeHtml(cat.photo_url)}" alt="${escapeHtml(cat.name)}">
       <h2>${escapeHtml(cat.name)}</h2>
@@ -326,9 +371,125 @@ async function openCat(id) {
       <p>Price: ${cat.price} UAH</p>
       <p>Status: ${STATUS_LABELS[cat.status] ?? cat.status}</p>
       <p>Breeder: <button type="button" class="link-btn" data-breeder-id="${cat.breeder.id}">${escapeHtml(cat.breeder.name)}</button>${breederPlace ? ", " + breederPlace : ""}</p>
-      <p>${escapeHtml(cat.description)}</p>`;
+      <p>${escapeHtml(cat.description)}</p>
+      <section class="section-title">Pedigree</section>
+      <div id="cat-pedigree" class="pedigree">Loading...</div>
+      ${showForm ? `<section class="section-title">Edit parents</section>
+      <form id="cat-parent-form" class="parent-form" novalidate>
+        <p class="form-error" id="cat-parent-form-error" role="alert"></p>
+        <label class="field">Mother
+          <select name="mother_id" disabled><option value="">Loading cats...</option></select>
+          <small class="error" data-error-for="mother"></small>
+        </label>
+        <label class="field">Father
+          <select name="father_id" disabled><option value="">Loading cats...</option></select>
+          <small class="error" data-error-for="father"></small>
+        </label>
+        <button type="submit" class="btn btn-primary btn-block" disabled>Save parents</button>
+      </form>` : ""}`;
+    loadCatPedigree(id);
+    if (showForm) setupParentForm(id, cat);
   } catch (err) {
-    details.textContent = `Could not load cat: ${err.message}`;
+    if (currentCatId === id) details.textContent = `Could not load cat: ${err.message}`;
+  }
+}
+
+function pedigreeNodeHtml(node) {
+  if (!node) return `<div class="pedigree-node pedigree-unknown" tabindex="0">Unknown</div>`;
+  return `
+    <div class="pedigree-node" data-cat-id="${node.id}" tabindex="0">
+      <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
+      <div class="pedigree-info">
+        <strong>${escapeHtml(node.name)}</strong>
+        <span>${escapeHtml(node.breed)} · ${node.sex === "female" ? "Female" : "Male"}</span>
+        <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
+      </div>
+      <div class="pedigree-parents">
+        <div><span class="pedigree-label">Mother</span>${pedigreeNodeHtml(node.mother)}</div>
+        <div><span class="pedigree-label">Father</span>${pedigreeNodeHtml(node.father)}</div>
+      </div>
+    </div>`;
+}
+
+async function loadCatPedigree(id) {
+  const el = $("cat-pedigree");
+  if (!el) return;
+  el.textContent = "Loading...";
+  try {
+    const node = await api(`/cats/${id}/pedigree${SLASH}`);
+    if (currentCatId !== id) return;
+    el.innerHTML = pedigreeNodeHtml(node);
+  } catch (err) {
+    if (currentCatId !== id) return;
+    el.textContent = `Could not load pedigree: ${err.message}`;
+  }
+}
+
+async function setupParentForm(catId, cat) {
+  const form = $("cat-parent-form");
+  if (!form) return;
+  try {
+    const cats = await loadAllCats();
+    if (currentCatId !== catId) return;
+    const motherSelect = form.elements.mother_id;
+    const fatherSelect = form.elements.father_id;
+    const mothers = cats
+      .filter((c) => c.id !== Number(catId) && c.sex === "female")
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    const fathers = cats
+      .filter((c) => c.id !== Number(catId) && c.sex === "male")
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    motherSelect.innerHTML = `<option value="">None</option>` + mothers
+      .map((c) => `<option value="${c.id}">${escapeHtml(c.name)} (${escapeHtml(c.breed?.name ?? "")})</option>`)
+      .join("");
+    fatherSelect.innerHTML = `<option value="">None</option>` + fathers
+      .map((c) => `<option value="${c.id}">${escapeHtml(c.name)} (${escapeHtml(c.breed?.name ?? "")})</option>`)
+      .join("");
+    motherSelect.value = cat.mother ? String(cat.mother.id) : "";
+    fatherSelect.value = cat.father ? String(cat.father.id) : "";
+    motherSelect.disabled = false;
+    fatherSelect.disabled = false;
+    const btn = form.querySelector("button[type=submit]");
+    if (btn) btn.disabled = false;
+  } catch (err) {
+    if (currentCatId !== catId) return;
+    const errEl = form.querySelector(".form-error");
+    if (errEl) errEl.textContent = `Could not load cats: ${err.message}`;
+  }
+  form.addEventListener("submit", handleParentSubmit);
+}
+
+async function handleParentSubmit(e) {
+  e.preventDefault();
+  const form = e.target;
+  clearFormErrors(form);
+  const catId = currentCatId;
+  if (!catId) return;
+  const motherVal = form.elements.mother_id.value;
+  const fatherVal = form.elements.father_id.value;
+  const body = {
+    mother_id: motherVal === "" ? null : Number(motherVal),
+    father_id: fatherVal === "" ? null : Number(fatherVal),
+  };
+  setBusy(form, true);
+  try {
+    await request(`/cats/${catId}${SLASH}`, { method: "PATCH", body });
+    allCatsCache = null;
+    await openCat(catId);
+    const details = $("cat-details");
+    const note = document.createElement("p");
+    note.className = "message";
+    note.textContent = "Parents updated.";
+    details.prepend(note);
+  } catch (err) {
+    if (err.status === 403) {
+      const fe = form.querySelector(".form-error");
+      if (fe) fe.textContent = "You don't have permission to edit this cat.";
+    } else {
+      showServerErrors(form, err);
+    }
+  } finally {
+    setBusy(form, false);
   }
 }
 
@@ -356,11 +517,13 @@ async function loadBreeders() {
 }
 
 async function openBreeder(id) {
+  currentBreederId = id;
   const details = $("breeder-details");
   details.textContent = "Loading...";
   $("breeder-dialog").showModal();
   try {
     const b = await api(`/breeders/${id}${SLASH}`);
+    if (currentBreederId !== id) return;
     const phone = b.phone
       ? `<p>Phone: <a href="tel:${escapeHtml(b.phone)}">${escapeHtml(b.phone)}</a></p>`
       : "";
@@ -389,9 +552,103 @@ async function openBreeder(id) {
       ${email}
       ${b.description ? `<p>${escapeHtml(b.description)}</p>` : ""}
       <h3 class="section-title">Breeder's cats (${(b.cats ?? []).length})</h3>
-      ${cats ? `<div class="grid">${cats}</div>` : `<p class="message">No cats yet.</p>`}`;
+      ${cats ? `<div class="grid">${cats}</div>` : `<p class="message">No cats yet.</p>`}
+      <section class="section-title">Alumni (sold)</section>
+      <div id="breeder-alumni" class="grid"><p class="message">Loading...</p></div>
+      <section class="section-title">Family lines</section>
+      <div id="breeder-families" class="families"><p class="message">Loading...</p></div>`;
+    loadBreederAlumni(id);
+    loadBreederFamilies(id);
   } catch (err) {
-    details.textContent = `Could not load breeder: ${err.message}`;
+    if (currentBreederId === id) details.textContent = `Could not load breeder: ${err.message}`;
+  }
+}
+
+function breederCatCard(cat) {
+  return `
+    <article class="card" data-cat-id="${cat.id}" tabindex="0">
+      <img src="${escapeHtml(cat.photo_url)}" alt="${escapeHtml(cat.name)}">
+      <h3>${escapeHtml(cat.name)}</h3>
+      ${cat.breed ? `<p>${escapeHtml(cat.breed.name)}</p>` : ""}
+      <p class="price">${cat.price} UAH</p>
+      <p class="status ${cat.status}">${STATUS_LABELS[cat.status] ?? cat.status}</p>
+    </article>`;
+}
+
+async function loadBreederAlumni(id) {
+  const el = $("breeder-alumni");
+  if (!el) return;
+  el.innerHTML = `<p class="message">Loading...</p>`;
+  try {
+    const cats = await api(`/breeders/${id}/alumni${SLASH}`);
+    if (currentBreederId !== id) return;
+    if (!Array.isArray(cats) || !cats.length) {
+      el.innerHTML = `<p class="message">No alumni yet.</p>`;
+      return;
+    }
+    el.innerHTML = cats.map(breederCatCard).join("");
+  } catch (err) {
+    if (currentBreederId !== id) return;
+    el.innerHTML = `<p class="message">Could not load alumni: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function familyTreeHtml(node) {
+  if (!node) return "";
+  const motherRef = node.mother
+    ? `<span class="ref">Mother: <button type="button" class="link-btn" data-cat-id="${node.mother.id}">${escapeHtml(node.mother.name)}</button></span>`
+    : "";
+  const fatherRef = node.father
+    ? `<span class="ref">Father: <button type="button" class="link-btn" data-cat-id="${node.father.id}">${escapeHtml(node.father.name)}</button></span>`
+    : "";
+  const children = (node.children && node.children.length)
+    ? `<ul class="tree-children">${node.children.map(familyTreeHtml).join("")}</ul>`
+    : "";
+  return `
+    <li class="tree-node">
+      <div class="tree-card" data-cat-id="${node.id}" tabindex="0">
+        <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
+        <div class="tree-info">
+          <strong>${escapeHtml(node.name)}</strong>
+          <span>${escapeHtml(node.breed)} · ${node.sex === "female" ? "Female" : "Male"}</span>
+          <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
+          ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
+        </div>
+        <div class="tree-refs">${motherRef}${fatherRef}</div>
+      </div>
+      ${children}
+    </li>`;
+}
+
+function familyCardHtml(family) {
+  const roots = (family.roots || [])
+    .map((r) => `<button type="button" class="link-btn" data-cat-id="${r.id}">${escapeHtml(r.name)}</button>`)
+    .join(", ") || "—";
+  return `
+    <article class="family-card">
+      <h4>Family</h4>
+      <p class="message">${family.cats_count} cats · ${family.generations} generations</p>
+      <p>Roots: ${roots}</p>
+      <ul class="tree">${familyTreeHtml(family.tree)}</ul>
+    </article>`;
+}
+
+async function loadBreederFamilies(id) {
+  const el = $("breeder-families");
+  if (!el) return;
+  el.innerHTML = `<p class="message">Loading...</p>`;
+  try {
+    const data = await api(`/breeders/${id}/pedigrees${SLASH}`);
+    if (currentBreederId !== id) return;
+    const families = data.families ?? [];
+    if (!families.length) {
+      el.innerHTML = `<p class="message">No family lines yet.</p>`;
+      return;
+    }
+    el.innerHTML = `<div class="families">${families.map(familyCardHtml).join("")}</div>`;
+  } catch (err) {
+    if (currentBreederId !== id) return;
+    el.innerHTML = `<p class="message">Could not load family lines: ${escapeHtml(err.message)}</p>`;
   }
 }
 
@@ -408,6 +665,8 @@ function renderAuth() {
 // Видаляє токени на клієнті
 function clearSession() {
   tokens.clear();
+  meCache = null;
+  allCatsCache = null;
   renderAuth();
 }
 
@@ -529,6 +788,8 @@ async function doLogin(username, password) {
   });
   tokens.set(data.access, data.refresh);
   localStorage.setItem(USERNAME_KEY, username);
+  meCache = null;
+  allCatsCache = null;
   renderAuth();
 }
 
@@ -768,6 +1029,14 @@ $("cat-details").addEventListener("click", (e) => {
   if (!btn) return;
   $("cat-dialog").close();
   openBreeder(btn.dataset.breederId);
+});
+
+// Клік по вузлу родоводу: відкрити картку цього кота
+$("cat-details").addEventListener("click", (e) => {
+  const node = e.target.closest("[data-cat-id]");
+  if (!node) return;
+  const id = node.dataset.catId;
+  if (id && id !== String(currentCatId)) openCat(id);
 });
 
 $("dialog-close").addEventListener("click", () => $("cat-dialog").close());
