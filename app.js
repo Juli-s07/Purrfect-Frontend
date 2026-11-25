@@ -652,7 +652,6 @@ function familyTreeHtml(node) {
     return `
       <li class="family-unit">
         <div class="parents-row">
-          ${fatherCard}
           <div class="tree-card mother-card" data-cat-id="${node.id}" tabindex="0">
             <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
             <div class="tree-info">
@@ -663,6 +662,7 @@ function familyTreeHtml(node) {
             </div>
             <div class="tree-refs">${motherRef}${fatherRef}</div>
           </div>
+          ${fatherCard}
         </div>
         <ul class="tree-children">${group.children.map(familyTreeHtml).join("")}</ul>
       </li>`;

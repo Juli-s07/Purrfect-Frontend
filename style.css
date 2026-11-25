@@ -274,7 +274,7 @@ dialog .card img { height: 140px; }
   display: flex; flex-wrap: wrap; gap: .75rem; align-items: stretch;
 }
 .parents-row .tree-card { flex: 1 1 180px; }
-.father-card { border-color: var(--accent-2); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%); }
+.father-card { border-color: #3b82f6; background: linear-gradient(160deg, var(--sky), var(--surface) 70%); }
 .mother-card { border-color: #e58b6d; background: linear-gradient(160deg, var(--peach), var(--surface) 70%); }
 .father-unknown {
   flex: 1 1 180px; display: flex; align-items: center; justify-content: center;
