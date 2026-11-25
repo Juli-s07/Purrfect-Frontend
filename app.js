@@ -654,12 +654,12 @@ async function openBreeder(id) {
       ${b.description ? `<p>${escapeHtml(b.description)}</p>` : ""}
       <h3 class="section-title">Breeder's cats (${ownedCats.length})</h3>
       ${cats ? `<div class="grid">${cats}</div>` : `<p class="message">No cats yet.</p>`}
-      <section class="section-title">Alumni (sold)</section>
-      <div id="breeder-alumni" class="grid"><p class="message">Loading...</p></div>
       <section class="section-title">Family lines</section>
-      <div id="breeder-families" class="families"><p class="message">Loading...</p></div>`;
-    loadBreederAlumni(id);
+      <div id="breeder-families" class="families"><p class="message">Loading...</p></div>
+      <section class="section-title">Alumni (sold)</section>
+      <div id="breeder-alumni" class="grid"><p class="message">Loading...</p></div>`;
     loadBreederFamilies(id);
+    loadBreederAlumni(id);
   } catch (err) {
     if (currentBreederId === id) details.textContent = `Could not load breeder: ${err.message}`;
   }
