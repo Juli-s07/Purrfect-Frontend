@@ -636,32 +636,40 @@ function familyTreeHtml(node) {
       </li>`;
   }
 
-  // Вузол з дітьми: батько ліворуч, мама праворуч, діти під ними
+  // Вузол з дітьми: мама ліворуч, батько праворуч, діти під ними.
+  // Якщо вузол сам по собі батько (чоловіча стать), показуємо його як батька,
+  // а маму — як Unknown, щоб не було «двох батьків».
+  const nodeIsMother = node.sex === "female";
+  const motherCard = nodeIsMother
+    ? `<div class="tree-card mother-card" data-cat-id="${node.id}" tabindex="0">
+        <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
+        <div class="tree-info">
+          <strong>${escapeHtml(node.name)}</strong>
+          <span>${escapeHtml(node.breed)} · ${node.sex === "female" ? "Female" : "Male"}</span>
+          <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
+          ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
+        </div>
+        <div class="tree-refs">${motherRef}${fatherRef}</div>
+      </div>`
+    : `<div class="mother-unknown">Mother: Unknown</div>`;
+
   return groups.map((group) => {
-    const fatherCard = group.father
-      ? `<div class="tree-card father-card" data-cat-id="${group.father.id}" tabindex="0">
-          <img src="${escapeHtml(group.father.photo_url)}" alt="${escapeHtml(group.father.name)}">
+    const fatherSource = !nodeIsMother ? node : (group.father || null);
+    const fatherCard = fatherSource
+      ? `<div class="tree-card father-card" data-cat-id="${fatherSource.id}" tabindex="0">
+          <img src="${escapeHtml(fatherSource.photo_url)}" alt="${escapeHtml(fatherSource.name)}">
           <div class="tree-info">
-            <strong>${escapeHtml(group.father.name)}</strong>
-            <span>${escapeHtml(group.father.breed)} · ${group.father.sex === "female" ? "Female" : "Male"}</span>
-            <span class="status ${group.father.status}">${STATUS_LABELS[group.father.status] ?? group.father.status}</span>
-            ${group.father.birth_date ? `<span class="tree-date">${escapeHtml(group.father.birth_date)}</span>` : ""}
+            <strong>${escapeHtml(fatherSource.name)}</strong>
+            <span>${escapeHtml(fatherSource.breed)} · ${fatherSource.sex === "female" ? "Female" : "Male"}</span>
+            <span class="status ${fatherSource.status}">${STATUS_LABELS[fatherSource.status] ?? fatherSource.status}</span>
+            ${fatherSource.birth_date ? `<span class="tree-date">${escapeHtml(fatherSource.birth_date)}</span>` : ""}
           </div>
         </div>`
       : `<div class="father-unknown">Father: Unknown</div>`;
     return `
       <li class="family-unit">
         <div class="parents-row">
-          <div class="tree-card mother-card" data-cat-id="${node.id}" tabindex="0">
-            <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
-            <div class="tree-info">
-              <strong>${escapeHtml(node.name)}</strong>
-              <span>${escapeHtml(node.breed)} · ${node.sex === "female" ? "Female" : "Male"}</span>
-              <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
-              ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
-            </div>
-            <div class="tree-refs">${motherRef}${fatherRef}</div>
-          </div>
+          ${motherCard}
           ${fatherCard}
         </div>
         <ul class="tree-children">${group.children.map(familyTreeHtml).join("")}</ul>

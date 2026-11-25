@@ -281,6 +281,11 @@ dialog .card img { height: 140px; }
   border: 1px dashed var(--border); border-radius: 12px; padding: .6rem;
   color: var(--muted); font-style: italic;
 }
+.mother-unknown {
+  flex: 1 1 180px; display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border); border-radius: 12px; padding: .6rem;
+  color: var(--muted); font-style: italic;
+}
 @media (max-width: 520px) {
   .parents-row .tree-card, .father-unknown { flex-basis: 100%; }
 }
