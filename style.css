@@ -217,3 +217,103 @@ dialog .card img { height: 140px; }
 .btn:disabled { opacity: .6; cursor: progress; }
 
 .link-btn { font: inherit; padding: 0; border: 0; background: none; color: var(--accent); text-decoration: underline; cursor: pointer; }
+
+/* Родоводи */
+.pedigree { display: grid; gap: .75rem; overflow-x: auto; padding-bottom: .5rem; }
+.pedigree .pedigree-node { margin-bottom: .25rem; }
+
+/* Відтінки за статтю: дівчата червонуваті, хлопці блакитні */
+.tree-card.sex-female, .pedigree-node.sex-female {
+  background: linear-gradient(160deg, #fde2e4, var(--surface) 72%);
+  border-color: #e8a0a6;
+}
+.tree-card.sex-male, .pedigree-node.sex-male {
+  background: linear-gradient(160deg, var(--sky), var(--surface) 72%);
+  border-color: #7ab0e8;
+}
+.pedigree-node {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .2s, transform .2s;
+}
+.pedigree-node:hover { border-color: var(--accent-2); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+.pedigree-node:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 2px; }
+.pedigree-unknown { color: var(--muted); font-style: italic; cursor: default; }
+.pedigree-node img { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; float: left; margin-right: .75rem; }
+.pedigree-info { display: flex; flex-direction: column; gap: .15rem; min-height: 64px; justify-content: center; }
+.pedigree-info strong { font-size: 1rem; }
+.pedigree-info span { color: var(--muted); font-size: .9rem; }
+.pedigree-parents { clear: both; display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--border); }
+.pedigree-label { display: block; font-size: .8rem; font-weight: 700; color: var(--muted); margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .04em; }
+.pedigree-parents .pedigree-node { transform: none; }
+.pedigree-parents .pedigree-node img { width: 48px; height: 48px; }
+@media (max-width: 520px) {
+  .pedigree-parents { grid-template-columns: 1fr; }
+}
+
+/* Сімейні лінії заводчика */
+.families { display: grid; gap: 1rem; }
+.family-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.family-card h4 { margin: 0 0 .35rem; }
+.tree { list-style: none; margin: .75rem 0 0; padding: 0; }
+.tree-children {
+  list-style: none;
+  margin: .5rem 0 0 1rem;
+  padding: 0 0 0 .75rem;
+  border-left: 2px solid var(--border);
+}
+.father-group { margin: .5rem 0; }
+.father-group-label {
+  display: inline-block; padding: .15rem .6rem; margin-bottom: .35rem;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  font-size: .8rem; font-weight: 700;
+}
+
+/* Сімейний вузол: батько ліворуч, мама праворуч */
+.family-unit { margin: .75rem 0; }
+.parents-row {
+  display: flex; flex-wrap: wrap; gap: .75rem; align-items: stretch;
+}
+.parents-row .tree-card { flex: 1 1 180px; }
+.father-card { border-color: #3b82f6; background: linear-gradient(160deg, var(--sky), var(--surface) 70%); }
+.mother-card { border-color: #e58b6d; background: linear-gradient(160deg, var(--peach), var(--surface) 70%); }
+.father-unknown {
+  flex: 1 1 180px; display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border); border-radius: 12px; padding: .6rem;
+  color: var(--muted); font-style: italic;
+}
+.mother-unknown {
+  flex: 1 1 180px; display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border); border-radius: 12px; padding: .6rem;
+  color: var(--muted); font-style: italic;
+}
+@media (max-width: 520px) {
+  .parents-row .tree-card, .father-unknown { flex-basis: 100%; }
+}
+.tree-node { margin: .5rem 0; }
+.tree-card {
+  display: flex; gap: .75rem; align-items: center;
+  border: 1px solid var(--border); border-radius: 12px; padding: .6rem;
+  background: var(--bg); cursor: pointer;
+  transition: border-color .15s, box-shadow .2s;
+}
+.tree-card:hover { border-color: var(--accent-2); box-shadow: var(--shadow); }
+.tree-card img { width: 48px; height: 48px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
+.tree-info { display: flex; flex-direction: column; gap: .1rem; flex: 1; min-width: 0; }
+.tree-info strong { font-size: .95rem; }
+.tree-info span { color: var(--muted); font-size: .85rem; }
+.tree-date { font-size: .8rem; color: var(--muted); }
+.tree-refs { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .35rem; font-size: .85rem; }
+.ref { color: var(--muted); }
+.ref .link-btn { font-size: .85rem; }
+.families { overflow-x: auto; }
