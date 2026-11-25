@@ -706,12 +706,6 @@ function groupChildrenByFather(children) {
 
 function familyTreeHtml(node) {
   if (!node) return "";
-  const motherRef = node.mother
-    ? `<span class="ref">Mother: <button type="button" class="link-btn" data-cat-id="${node.mother.id}">${escapeHtml(node.mother.name)}</button></span>`
-    : "";
-  const fatherRef = node.father
-    ? `<span class="ref">Father: <button type="button" class="link-btn" data-cat-id="${node.father.id}">${escapeHtml(node.father.name)}</button></span>`
-    : "";
   const groups = groupChildrenByFather(node.children);
 
   // Листок без дітей
@@ -726,7 +720,7 @@ function familyTreeHtml(node) {
             <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
             ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
           </div>
-          <div class="tree-refs">${motherRef}${fatherRef}</div>
+
         </div>
       </li>`;
   }
@@ -744,7 +738,7 @@ function familyTreeHtml(node) {
           <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
           ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
         </div>
-        <div class="tree-refs">${motherRef}${fatherRef}</div>
+
       </div>`
     : `<div class="mother-unknown">Mother: Unknown</div>`;
 
