@@ -221,6 +221,16 @@ dialog .card img { height: 140px; }
 /* Родоводи */
 .pedigree { display: grid; gap: .75rem; overflow-x: auto; padding-bottom: .5rem; }
 .pedigree .pedigree-node { margin-bottom: .25rem; }
+
+/* Відтінки за статтю: дівчата червонуваті, хлопці блакитні */
+.tree-card.sex-female, .pedigree-node.sex-female {
+  background: linear-gradient(160deg, #fde2e4, var(--surface) 72%);
+  border-color: #e8a0a6;
+}
+.tree-card.sex-male, .pedigree-node.sex-male {
+  background: linear-gradient(160deg, var(--sky), var(--surface) 72%);
+  border-color: #7ab0e8;
+}
 .pedigree-node {
   border: 1px solid var(--border);
   border-radius: var(--radius);

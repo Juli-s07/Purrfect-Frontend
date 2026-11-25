@@ -150,6 +150,7 @@ let allCatsCache = null;
 const breederPedigreesCache = new Map();
 let currentCatId = null;
 let currentBreederId = null;
+let catHistory = [];
 
 async function loadMe() {
   if (!tokens.access) { meCache = null; return null; }
@@ -355,7 +356,13 @@ async function loadCats(page = 1) {
   }
 }
 
-async function openCat(id) {
+async function openCat(id, options = {}) {
+  const { reset = false, push = true, popHistory = false } = options;
+  const previousId = currentCatId;
+  if (reset) catHistory = [];
+  let nextHistory = [...catHistory];
+  if (push && previousId && String(previousId) !== String(id)) nextHistory.push(String(previousId));
+
   currentCatId = id;
   const details = $("cat-details");
   details.textContent = "Loading...";
@@ -363,12 +370,16 @@ async function openCat(id) {
   try {
     const cat = await api(`/cats/${id}${SLASH}`);
     if (currentCatId !== id) return;
+    if (popHistory) nextHistory.pop();
+    catHistory = nextHistory;
+
     const breederCountry = countryName(cat.breeder);
     const breederPlace = [cat.breeder.city, breederCountry].filter(Boolean).map(escapeHtml).join(", ");
     const me = await loadMe();
     if (currentCatId !== id) return;
     const showForm = canEditParents(me);
     details.innerHTML = `
+      ${catHistory.length ? `<div class="dialog-actions"><button type="button" class="btn" id="cat-back">← Back</button></div>` : ""}
       <img src="${escapeHtml(cat.photo_url)}" alt="${escapeHtml(cat.name)}">
       <h2>${escapeHtml(cat.name)}</h2>
       <p>Breed: ${escapeHtml(cat.breed.name)}</p>
@@ -395,6 +406,13 @@ async function openCat(id) {
         </label>
         <button type="submit" class="btn btn-primary btn-block" disabled>Save parents</button>
       </form>` : ""}`;
+    const backBtn = $("cat-back");
+    if (backBtn) {
+      backBtn.onclick = () => {
+        const prev = catHistory.length ? catHistory[catHistory.length - 1] : null;
+        if (prev) openCat(prev, { push: false, popHistory: true });
+      };
+    }
     loadCatPedigree(id);
     loadSiblings(id, cat.breeder ? cat.breeder.id : null);
     if (showForm) setupParentForm(id, cat);
@@ -406,7 +424,7 @@ async function openCat(id) {
 function pedigreeNodeHtml(node) {
   if (!node) return `<div class="pedigree-node pedigree-unknown" tabindex="0">Unknown</div>`;
   return `
-    <div class="pedigree-node" data-cat-id="${node.id}" tabindex="0">
+    <div class="pedigree-node sex-${node.sex}" data-cat-id="${node.id}" tabindex="0">
       <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
       <div class="pedigree-info">
         <strong>${escapeHtml(node.name)}</strong>
@@ -540,7 +558,7 @@ async function handleParentSubmit(e) {
   try {
     await request(`/cats/${catId}${SLASH}`, { method: "PATCH", body });
     allCatsCache = null;
-    await openCat(catId);
+    await openCat(catId, { push: false });
     const details = $("cat-details");
     const note = document.createElement("p");
     note.className = "message";
@@ -683,7 +701,7 @@ function familyTreeHtml(node) {
   if (!groups.length) {
     return `
       <li class="tree-node">
-        <div class="tree-card" data-cat-id="${node.id}" tabindex="0">
+        <div class="tree-card sex-${node.sex}" data-cat-id="${node.id}" tabindex="0">
           <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
           <div class="tree-info">
             <strong>${escapeHtml(node.name)}</strong>
@@ -701,7 +719,7 @@ function familyTreeHtml(node) {
   // а маму — як Unknown, щоб не було «двох батьків».
   const nodeIsMother = node.sex === "female";
   const motherCard = nodeIsMother
-    ? `<div class="tree-card mother-card" data-cat-id="${node.id}" tabindex="0">
+    ? `<div class="tree-card mother-card sex-${node.sex}" data-cat-id="${node.id}" tabindex="0">
         <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
         <div class="tree-info">
           <strong>${escapeHtml(node.name)}</strong>
@@ -716,7 +734,7 @@ function familyTreeHtml(node) {
   return groups.map((group) => {
     const fatherSource = !nodeIsMother ? node : (group.father || null);
     const fatherCard = fatherSource
-      ? `<div class="tree-card father-card" data-cat-id="${fatherSource.id}" tabindex="0">
+      ? `<div class="tree-card father-card sex-${fatherSource.sex}" data-cat-id="${fatherSource.id}" tabindex="0">
           <img src="${escapeHtml(fatherSource.photo_url)}" alt="${escapeHtml(fatherSource.name)}">
           <div class="tree-info">
             <strong>${escapeHtml(fatherSource.name)}</strong>
@@ -1108,7 +1126,7 @@ $("filter-reset").addEventListener("click", () => {
 
 $("cats").addEventListener("click", (e) => {
   const card = e.target.closest(".card");
-  if (card) openCat(card.dataset.id);
+  if (card) openCat(card.dataset.id, { reset: true });
 });
 $("cats").addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
@@ -1133,7 +1151,7 @@ function openCatFromBreeder(e) {
   const card = e.target.closest("[data-cat-id]");
   if (!card) return;
   $("breeder-dialog").close();
-  openCat(card.dataset.catId);
+  openCat(card.dataset.catId, { reset: true });
 }
 $("breeder-details").addEventListener("click", openCatFromBreeder);
 $("breeder-details").addEventListener("keydown", (e) => {
@@ -1157,6 +1175,7 @@ $("cat-details").addEventListener("click", (e) => {
 });
 
 $("dialog-close").addEventListener("click", () => $("cat-dialog").close());
+$("cat-dialog").addEventListener("close", () => { catHistory = []; currentCatId = null; });
 $("breeder-dialog-close").addEventListener("click", () => $("breeder-dialog").close());
 
 renderAuth();
