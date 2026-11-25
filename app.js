@@ -618,31 +618,55 @@ function familyTreeHtml(node) {
     ? `<span class="ref">Father: <button type="button" class="link-btn" data-cat-id="${node.father.id}">${escapeHtml(node.father.name)}</button></span>`
     : "";
   const groups = groupChildrenByFather(node.children);
-  const children = groups.length
-    ? `<ul class="tree-children">${groups.map((group) => {
-        const label = group.father
-          ? `<span class="ref">Father: <button type="button" class="link-btn" data-cat-id="${group.father.id}">${escapeHtml(group.father.name)}</button></span>`
-          : `<span class="ref">Father: Unknown</span>`;
-        return `<li class="father-group">
-          <div class="father-group-label">${label}</div>
-          <ul class="tree-children">${group.children.map(familyTreeHtml).join("")}</ul>
-        </li>`;
-      }).join("")}</ul>`
-    : "";
-  return `
-    <li class="tree-node">
-      <div class="tree-card" data-cat-id="${node.id}" tabindex="0">
-        <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
-        <div class="tree-info">
-          <strong>${escapeHtml(node.name)}</strong>
-          <span>${escapeHtml(node.breed)} · ${node.sex === "female" ? "Female" : "Male"}</span>
-          <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
-          ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
+
+  // Листок без дітей
+  if (!groups.length) {
+    return `
+      <li class="tree-node">
+        <div class="tree-card" data-cat-id="${node.id}" tabindex="0">
+          <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
+          <div class="tree-info">
+            <strong>${escapeHtml(node.name)}</strong>
+            <span>${escapeHtml(node.breed)} · ${node.sex === "female" ? "Female" : "Male"}</span>
+            <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
+            ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
+          </div>
+          <div class="tree-refs">${motherRef}${fatherRef}</div>
         </div>
-        <div class="tree-refs">${motherRef}${fatherRef}</div>
-      </div>
-      ${children}
-    </li>`;
+      </li>`;
+  }
+
+  // Вузол з дітьми: батько ліворуч, мама праворуч, діти під ними
+  return groups.map((group) => {
+    const fatherCard = group.father
+      ? `<div class="tree-card father-card" data-cat-id="${group.father.id}" tabindex="0">
+          <img src="${escapeHtml(group.father.photo_url)}" alt="${escapeHtml(group.father.name)}">
+          <div class="tree-info">
+            <strong>${escapeHtml(group.father.name)}</strong>
+            <span>${escapeHtml(group.father.breed)} · ${group.father.sex === "female" ? "Female" : "Male"}</span>
+            <span class="status ${group.father.status}">${STATUS_LABELS[group.father.status] ?? group.father.status}</span>
+            ${group.father.birth_date ? `<span class="tree-date">${escapeHtml(group.father.birth_date)}</span>` : ""}
+          </div>
+        </div>`
+      : `<div class="father-unknown">Father: Unknown</div>`;
+    return `
+      <li class="family-unit">
+        <div class="parents-row">
+          ${fatherCard}
+          <div class="tree-card mother-card" data-cat-id="${node.id}" tabindex="0">
+            <img src="${escapeHtml(node.photo_url)}" alt="${escapeHtml(node.name)}">
+            <div class="tree-info">
+              <strong>${escapeHtml(node.name)}</strong>
+              <span>${escapeHtml(node.breed)} · ${node.sex === "female" ? "Female" : "Male"}</span>
+              <span class="status ${node.status}">${STATUS_LABELS[node.status] ?? node.status}</span>
+              ${node.birth_date ? `<span class="tree-date">${escapeHtml(node.birth_date)}</span>` : ""}
+            </div>
+            <div class="tree-refs">${motherRef}${fatherRef}</div>
+          </div>
+        </div>
+        <ul class="tree-children">${group.children.map(familyTreeHtml).join("")}</ul>
+      </li>`;
+  }).join("");
 }
 
 function familyCardHtml(family) {

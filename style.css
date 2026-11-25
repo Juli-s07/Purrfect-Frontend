@@ -267,6 +267,23 @@ dialog .card img { height: 140px; }
   border-radius: 999px; background: var(--accent-soft); color: var(--accent);
   font-size: .8rem; font-weight: 700;
 }
+
+/* Сімейний вузол: батько ліворуч, мама праворуч */
+.family-unit { margin: .75rem 0; }
+.parents-row {
+  display: flex; flex-wrap: wrap; gap: .75rem; align-items: stretch;
+}
+.parents-row .tree-card { flex: 1 1 180px; }
+.father-card { border-color: var(--accent-2); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%); }
+.mother-card { border-color: #e58b6d; background: linear-gradient(160deg, var(--peach), var(--surface) 70%); }
+.father-unknown {
+  flex: 1 1 180px; display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border); border-radius: 12px; padding: .6rem;
+  color: var(--muted); font-style: italic;
+}
+@media (max-width: 520px) {
+  .parents-row .tree-card, .father-unknown { flex-basis: 100%; }
+}
 .tree-node { margin: .5rem 0; }
 .tree-card {
   display: flex; gap: .75rem; align-items: center;
