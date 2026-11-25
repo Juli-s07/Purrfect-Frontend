@@ -261,6 +261,12 @@ dialog .card img { height: 140px; }
   padding: 0 0 0 .75rem;
   border-left: 2px solid var(--border);
 }
+.father-group { margin: .5rem 0; }
+.father-group-label {
+  display: inline-block; padding: .15rem .6rem; margin-bottom: .35rem;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  font-size: .8rem; font-weight: 700;
+}
 .tree-node { margin: .5rem 0; }
 .tree-card {
   display: flex; gap: .75rem; align-items: center;

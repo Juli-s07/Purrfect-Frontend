@@ -599,6 +599,16 @@ async function loadBreederAlumni(id) {
   }
 }
 
+function groupChildrenByFather(children) {
+  const groups = new Map();
+  for (const child of children || []) {
+    const key = child.father ? child.father.id : null;
+    if (!groups.has(key)) groups.set(key, { father: child.father || null, children: [] });
+    groups.get(key).children.push(child);
+  }
+  return [...groups.values()];
+}
+
 function familyTreeHtml(node) {
   if (!node) return "";
   const motherRef = node.mother
@@ -607,8 +617,17 @@ function familyTreeHtml(node) {
   const fatherRef = node.father
     ? `<span class="ref">Father: <button type="button" class="link-btn" data-cat-id="${node.father.id}">${escapeHtml(node.father.name)}</button></span>`
     : "";
-  const children = (node.children && node.children.length)
-    ? `<ul class="tree-children">${node.children.map(familyTreeHtml).join("")}</ul>`
+  const groups = groupChildrenByFather(node.children);
+  const children = groups.length
+    ? `<ul class="tree-children">${groups.map((group) => {
+        const label = group.father
+          ? `<span class="ref">Father: <button type="button" class="link-btn" data-cat-id="${group.father.id}">${escapeHtml(group.father.name)}</button></span>`
+          : `<span class="ref">Father: Unknown</span>`;
+        return `<li class="father-group">
+          <div class="father-group-label">${label}</div>
+          <ul class="tree-children">${group.children.map(familyTreeHtml).join("")}</ul>
+        </li>`;
+      }).join("")}</ul>`
     : "";
   return `
     <li class="tree-node">
