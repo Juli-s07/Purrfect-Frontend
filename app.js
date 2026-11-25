@@ -24,6 +24,13 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
+// Country comes from the API as {code: "UA", name: "Ukraine"}
+function countryName(breeder) {
+  const c = breeder && breeder.country_code;
+  if (!c) return "";
+  return typeof c === "string" ? c : c.name || c.code || "";
+}
+
 // ---------- Токени ----------
 
 const ACCESS_KEY = "access_token";
@@ -214,10 +221,18 @@ async function loadBreederFilters() {
       `<option value="">All breeders</option>` +
       breeders.map((b) => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join("");
 
-    const countries = [...new Set(breeders.map((b) => b.country).filter(Boolean))].sort();
+    // Унікальні країни заводчиків: value = код (UA), текст = назва (Ukraine)
+    const byCode = new Map();
+    breeders.forEach((b) => {
+      const c = b.country_code;
+      if (c && c.code) byCode.set(c.code, c.name || c.code);
+    });
+    const countries = [...byCode].sort((a, b) => a[1].localeCompare(b[1]));
     $("filter-country").innerHTML =
       `<option value="">All countries</option>` +
-      countries.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+      countries
+        .map(([code, name]) => `<option value="${escapeHtml(code)}">${escapeHtml(name)}</option>`)
+        .join("");
   } catch (err) {
     console.error("Could not load breeders for filters:", err.message);
   }
@@ -261,7 +276,7 @@ async function loadCats(page = 1) {
     search: filterValue("filter-search"),
     breed_id: $("filter-breed").value,
     breeder_id: $("filter-breeder").value,
-    country: $("filter-country").value,
+    country_code: $("filter-country").value, // код країни, напр. UA
     status: $("filter-status").value,
     min_price: minPrice,
     max_price: maxPrice,
@@ -300,6 +315,8 @@ async function openCat(id) {
   $("cat-dialog").showModal();
   try {
     const cat = await api(`/cats/${id}${SLASH}`);
+    const breederCountry = countryName(cat.breeder);
+    const breederPlace = [cat.breeder.city, breederCountry].filter(Boolean).map(escapeHtml).join(", ");
     details.innerHTML = `
       <img src="${escapeHtml(cat.photo_url)}" alt="${escapeHtml(cat.name)}">
       <h2>${escapeHtml(cat.name)}</h2>
@@ -308,7 +325,7 @@ async function openCat(id) {
       <p>Date of birth: ${escapeHtml(cat.birth_date)}</p>
       <p>Price: ${cat.price} UAH</p>
       <p>Status: ${STATUS_LABELS[cat.status] ?? cat.status}</p>
-      <p>Breeder: <button type="button" class="link-btn" data-breeder-id="${cat.breeder.id}">${escapeHtml(cat.breeder.name)}</button>${cat.breeder.city ? ", " + escapeHtml(cat.breeder.city) : ""}</p>
+      <p>Breeder: <button type="button" class="link-btn" data-breeder-id="${cat.breeder.id}">${escapeHtml(cat.breeder.name)}</button>${breederPlace ? ", " + breederPlace : ""}</p>
       <p>${escapeHtml(cat.description)}</p>`;
   } catch (err) {
     details.textContent = `Could not load cat: ${err.message}`;
@@ -329,7 +346,7 @@ async function loadBreeders() {
         (b) => `
         <article class="card" data-id="${b.id}" tabindex="0">
           <h3>${escapeHtml(b.name)}</h3>
-          <p>${escapeHtml(b.country)}${b.city ? ", " + escapeHtml(b.city) : ""}</p>
+          <p>${escapeHtml(countryName(b))}${b.city ? ", " + escapeHtml(b.city) : ""}</p>
         </article>`
       )
       .join("");
@@ -366,7 +383,7 @@ async function openBreeder(id) {
 
     details.innerHTML = `
       <h2>${escapeHtml(b.name)}</h2>
-      <p>Country: ${escapeHtml(b.country)}</p>
+      <p>Country: ${escapeHtml(countryName(b))}</p>
       ${b.city ? `<p>City: ${escapeHtml(b.city)}</p>` : ""}
       ${phone}
       ${email}
