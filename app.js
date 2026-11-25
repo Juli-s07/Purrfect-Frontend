@@ -151,6 +151,7 @@ const breederPedigreesCache = new Map();
 let currentCatId = null;
 let currentBreederId = null;
 let catHistory = [];
+let catDialogOriginBreederId = null;
 
 async function loadMe() {
   if (!tokens.access) { meCache = null; return null; }
@@ -359,7 +360,10 @@ async function loadCats(page = 1) {
 async function openCat(id, options = {}) {
   const { reset = false, push = true, popHistory = false } = options;
   const previousId = currentCatId;
-  if (reset) catHistory = [];
+  if (reset) {
+    catHistory = [];
+    catDialogOriginBreederId = null;
+  }
   let nextHistory = [...catHistory];
   if (push && previousId && String(previousId) !== String(id)) nextHistory.push(String(previousId));
 
@@ -379,7 +383,7 @@ async function openCat(id, options = {}) {
     if (currentCatId !== id) return;
     const showForm = canEditParents(me);
     details.innerHTML = `
-      ${catHistory.length ? `<div class="dialog-actions"><button type="button" class="btn" id="cat-back">← Back</button></div>` : ""}
+      ${catHistory.length || catDialogOriginBreederId ? `<div class="dialog-actions"><button type="button" class="btn" id="cat-back">${catHistory.length ? "← Back" : "← Back to breeder"}</button></div>` : ""}
       <img src="${escapeHtml(cat.photo_url)}" alt="${escapeHtml(cat.name)}">
       <h2>${escapeHtml(cat.name)}</h2>
       <p>Breed: ${escapeHtml(cat.breed.name)}</p>
@@ -410,7 +414,20 @@ async function openCat(id, options = {}) {
     if (backBtn) {
       backBtn.onclick = () => {
         const prev = catHistory.length ? catHistory[catHistory.length - 1] : null;
-        if (prev) openCat(prev, { push: false, popHistory: true });
+        if (prev) {
+          openCat(prev, { push: false, popHistory: true });
+        } else if (catDialogOriginBreederId) {
+          const breederId = catDialogOriginBreederId;
+          const breederDialog = $("breeder-dialog");
+          catDialogOriginBreederId = null;
+          catHistory = [];
+          currentCatId = null;
+          $("cat-dialog").close();
+          // Якщо дерево заводчика ще відкрите, прокрутка зберігається автоматично.
+          if (!breederDialog.open) {
+            openBreeder(breederId);
+          }
+        }
       };
     }
     loadCatPedigree(id);
@@ -1150,8 +1167,10 @@ $("breeders").addEventListener("keydown", (e) => {
 function openCatFromBreeder(e) {
   const card = e.target.closest("[data-cat-id]");
   if (!card) return;
-  $("breeder-dialog").close();
+  // Залишаємо дерево заводчика відкритим під карткою кота, щоб зберегти прокрутку.
+  catDialogOriginBreederId = currentBreederId;
   openCat(card.dataset.catId, { reset: true });
+  catDialogOriginBreederId = currentBreederId;
 }
 $("breeder-details").addEventListener("click", openCatFromBreeder);
 $("breeder-details").addEventListener("keydown", (e) => {
@@ -1175,7 +1194,7 @@ $("cat-details").addEventListener("click", (e) => {
 });
 
 $("dialog-close").addEventListener("click", () => $("cat-dialog").close());
-$("cat-dialog").addEventListener("close", () => { catHistory = []; currentCatId = null; });
+$("cat-dialog").addEventListener("close", () => { catHistory = []; currentCatId = null; catDialogOriginBreederId = null; });
 $("breeder-dialog-close").addEventListener("click", () => $("breeder-dialog").close());
 
 renderAuth();
