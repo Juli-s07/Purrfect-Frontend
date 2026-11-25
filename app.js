@@ -327,7 +327,12 @@ async function loadCats(page = 1) {
 
   try {
     const data = await api(`/cats${SLASH}?${params}`);
-    const cats = data.items ?? data; // працює і з пагінацією, і зі звичайним масивом
+    const allCats = data.items ?? data; // працює і з пагінацією, і зі звичайним масивом
+    // За замовчуванням приховуємо проданих; показуємо їх лише за явного вибору Status: Sold
+    const statusFilter = $("filter-status").value;
+    const cats = statusFilter === "sold"
+      ? allCats
+      : allCats.filter((cat) => cat.status !== "sold");
     message.textContent = cats.length ? "" : "No cats found for these filters.";
     container.innerHTML = cats
       .map(
@@ -341,7 +346,7 @@ async function loadCats(page = 1) {
         </article>`
       )
       .join("");
-    if (data.items) renderPagination(data.page ?? page, data.limit ?? Number($("filter-limit").value), data.total ?? cats.length);
+    if (data.items) renderPagination(data.page ?? page, data.limit ?? Number($("filter-limit").value), data.total ?? allCats.length);
     else $("pagination").hidden = true;
   } catch (err) {
     $("pagination").hidden = true;
@@ -531,7 +536,8 @@ async function openBreeder(id) {
       ? `<p>Email: <a href="mailto:${escapeHtml(b.email)}">${escapeHtml(b.email)}</a></p>`
       : "";
 
-    const cats = (b.cats ?? [])
+    const ownedCats = (b.cats ?? []).filter((cat) => cat.status !== "sold");
+    const cats = ownedCats
       .map(
         (cat) => `
         <article class="card" data-cat-id="${cat.id}" tabindex="0">
@@ -551,7 +557,7 @@ async function openBreeder(id) {
       ${phone}
       ${email}
       ${b.description ? `<p>${escapeHtml(b.description)}</p>` : ""}
-      <h3 class="section-title">Breeder's cats (${(b.cats ?? []).length})</h3>
+      <h3 class="section-title">Breeder's cats (${ownedCats.length})</h3>
       ${cats ? `<div class="grid">${cats}</div>` : `<p class="message">No cats yet.</p>`}
       <section class="section-title">Alumni (sold)</section>
       <div id="breeder-alumni" class="grid"><p class="message">Loading...</p></div>
