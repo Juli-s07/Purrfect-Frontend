@@ -147,6 +147,7 @@ const api = (path) => request(path);
 let meCache = null;
 let mePromise = null;
 let allCatsCache = null;
+const breederPedigreesCache = new Map();
 let currentCatId = null;
 let currentBreederId = null;
 
@@ -379,6 +380,8 @@ async function openCat(id) {
       <p>${escapeHtml(cat.description)}</p>
       <section class="section-title">Pedigree</section>
       <div id="cat-pedigree" class="pedigree">Loading...</div>
+      <section class="section-title">Siblings</section>
+      <div id="cat-siblings" class="grid">Loading...</div>
       ${showForm ? `<section class="section-title">Edit parents</section>
       <form id="cat-parent-form" class="parent-form" novalidate>
         <p class="form-error" id="cat-parent-form-error" role="alert"></p>
@@ -393,6 +396,7 @@ async function openCat(id) {
         <button type="submit" class="btn btn-primary btn-block" disabled>Save parents</button>
       </form>` : ""}`;
     loadCatPedigree(id);
+    loadSiblings(id, cat.breeder ? cat.breeder.id : null);
     if (showForm) setupParentForm(id, cat);
   } catch (err) {
     if (currentCatId === id) details.textContent = `Could not load cat: ${err.message}`;
@@ -427,6 +431,62 @@ async function loadCatPedigree(id) {
   } catch (err) {
     if (currentCatId !== id) return;
     el.textContent = `Could not load pedigree: ${err.message}`;
+  }
+}
+
+async function loadBreederPedigreesCached(breederId) {
+  if (breederPedigreesCache.has(breederId)) return breederPedigreesCache.get(breederId);
+  const data = await api(`/breeders/${breederId}/pedigrees${SLASH}`);
+  breederPedigreesCache.set(breederId, data);
+  return data;
+}
+
+function searchTreeNode(node, targetId, parent) {
+  if (!node) return null;
+  if (node.id === targetId) return { parent, siblings: parent ? (parent.children || []) : [] };
+  for (const child of node.children || []) {
+    const found = searchTreeNode(child, targetId, node);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findSiblingContext(families, targetId) {
+  for (const family of families || []) {
+    const found = searchTreeNode(family.tree, targetId, null);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function loadSiblings(catId, breederId) {
+  const el = $("cat-siblings");
+  if (!el) return;
+  el.innerHTML = `<p class="message">Loading...</p>`;
+  if (!breederId) {
+    el.innerHTML = `<p class="message">No siblings available.</p>`;
+    return;
+  }
+  try {
+    const data = await loadBreederPedigreesCached(breederId);
+    const found = findSiblingContext(data.families, Number(catId));
+    const siblings = (found?.siblings || []).filter((s) => s.id !== Number(catId));
+    if (currentCatId !== catId) return;
+    if (!siblings.length) {
+      el.innerHTML = `<p class="message">No siblings in this family line.</p>`;
+      return;
+    }
+    el.innerHTML = siblings.map((s) => `
+      <article class="card" data-cat-id="${s.id}" tabindex="0">
+        <img src="${escapeHtml(s.photo_url)}" alt="${escapeHtml(s.name)}">
+        <h3>${escapeHtml(s.name)}</h3>
+        <p>${escapeHtml(s.breed)} · ${s.sex === "female" ? "Female" : "Male"}</p>
+        <p class="status ${s.status}">${STATUS_LABELS[s.status] ?? s.status}</p>
+      </article>
+    `).join("");
+  } catch (err) {
+    if (currentCatId !== catId) return;
+    el.innerHTML = `<p class="message">Could not load siblings: ${escapeHtml(err.message)}</p>`;
   }
 }
 

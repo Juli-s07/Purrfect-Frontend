@@ -219,7 +219,8 @@ dialog .card img { height: 140px; }
 .link-btn { font: inherit; padding: 0; border: 0; background: none; color: var(--accent); text-decoration: underline; cursor: pointer; }
 
 /* Родоводи */
-.pedigree { display: grid; gap: .75rem; }
+.pedigree { display: grid; gap: .75rem; overflow-x: auto; padding-bottom: .5rem; }
+.pedigree .pedigree-node { margin-bottom: .25rem; }
 .pedigree-node {
   border: 1px solid var(--border);
   border-radius: var(--radius);
